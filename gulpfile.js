@@ -4,7 +4,8 @@ const ts = require('gulp-typescript');
 const rename = require("gulp-rename");
 const uglify = require('gulp-uglify-es').default;
 const tsProject = ts.createProject('tsconfig.json', { declaration: true });
-
+const replaceRules = require("./migrationRules.js");
+const replace = require('gulp-replace');
 const onwarn = warning => {
     // Silence circular dependency warning for moment package
     if (warning.code === 'CIRCULAR_DEPENDENCY')
@@ -57,10 +58,24 @@ gulp.task("uglify", function () {
         .pipe(gulp.dest("dist/"));
 });
 
+gulp.task('replace', function () {
+    let source = gulp.src(['dist/fairygui.module.js','dist/fairygui.js']);
+    for(let i = 0;i<replaceRules.length;i++){
+        let rule = replaceRules[i];
+        let {pattern,replacement,type} = rule;
+        if(type === "regex"){
+            pattern = new RegExp(pattern, 'g');
+        }
+        source = source.pipe(replace(pattern, replacement));
+    }
+    return source.pipe(gulp.dest('dist/'));
+});
+
 gulp.task('build'
     , gulp.series(
         gulp.parallel('buildJs'),
         gulp.parallel('rollup'),
+        gulp.parallel('replace'),
         gulp.parallel('uglify')
     )
 )
